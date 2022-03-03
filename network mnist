@@ -1,0 +1,94 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.special as ss
+import tensorflow as tf
+(train_image, train_label), (test_image, test_label) = tf.keras.datasets.mnist.load_data()
+
+# neural network class definition
+class neuralNetwork:
+    # initialise the neural Network
+    def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):
+        self.inodes = inputnodes
+        self.hnodes = hiddennodes
+        self.onodes = outputnodes
+        self.lr = learningrate
+
+        # link wieght matrice
+        self.win = np.random.normal(0.0, pow(self.hnodes, -0.5), (self.hnodes, self.inodes))
+        self.who = np.random.normal(0.0, pow(self.onodes, -0.5), (self.onodes, self.hnodes))
+
+        # sigmoid function
+        self.activation_function = lambda x: ss.expit(x)
+
+        pass
+
+    def train(self, inputs_list, targets_list):
+        inputs = np.array(inputs_list, ndmin=2).T
+        targets = np.array(targets_list, ndmin=2) .T
+
+        hidden_inputs = np.dot(self.win, inputs)
+        hidden_outputs = self.activation_function(hidden_inputs)
+
+        final_inputs = np.dot(self.who, hidden_outputs)
+        final_outputs = self.activation_function(final_inputs)
+        output_errors = targets - final_outputs
+        hidden_errors = np.dot(self.who.T, output_errors)
+
+        self.who += self.lr * np.dot((output_errors * final_outputs * (1.0 - final_outputs)), np.transpose(hidden_outputs))
+
+        self.win += self.lr * np.dot((hidden_errors * hidden_outputs * (1.0 - hidden_outputs)), np.transpose(inputs))
+        pass
+
+    def query(self, inputs_list):
+        inputs = np.array(inputs_list, ndmin=2).T
+        hidden_inputs = np.dot(self.win, inputs)
+        hidden_outputs = self.activation_function(hidden_inputs)
+        final_inputs = np.dot(self.who, hidden_outputs)
+        final_outputs = self.activation_function(final_inputs)
+
+        return final_outputs
+
+
+# number of input hidden output learningrate
+input_nodes = 784
+hidden_nodes = 200
+output_nodes = 10
+
+learning_rate = 0.1
+
+# create a new neural network
+n = neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
+
+scorecard=[]
+epochs = 1
+for e in range(epochs):
+    for i in range(60000):
+
+        all_values =train_image[i].flatten()
+        label = train_label[i]
+        inputs = (np.asfarray(all_values) / 255.0 * 0.99) + 0.01
+        targets = np.zeros(output_nodes) + 0.01
+        targets[label] = 0.99
+        n.train(inputs, targets)
+        pass
+    pass
+
+for i in range(10000):
+    all_values = test_image[i].flatten()
+    correct_label = test_label[i]
+    inputs = (np.asfarray(all_values) / 255.0 * 0.99) + 0.01
+    outputs = n.query(inputs)
+    predict_label = np.argmax(outputs)
+    if(predict_label == correct_label):
+        print("成功识别数字")
+        plt.imshow(test_image[i],cmap='gray')
+        plt.show()
+        scorecard.append(1)
+    else:
+        print("wrong")
+        scorecard.append(0)
+        pass
+    pass
+
+scorecard_array = np.asarray(scorecard)
+print("performance = ", scorecard_array.sum() / scorecard_array.size)
